@@ -1,19 +1,24 @@
+import sys
 import torch
 import pytorch_lightning as pl
 import torchvision.transforms as transforms
 from torchvision.datasets import CIFAR10
 from torch.utils.data import DataLoader, TensorDataset
-from cifar10_models import *
 from functools import partial
 import collections
 
-def get_classifier(classifier, pretrained, start_idx=None):
+if './' not in sys.path:
+    sys.path.append('./')
+
+from ..models import *
+
+def get_classifier(classifier, pretrained):
     if classifier == 'vgg11_bn':
         return vgg11_bn(pretrained=pretrained)
     elif classifier == 'vgg13_bn':
         return vgg13_bn(pretrained=pretrained)
     elif classifier == 'vgg16_bn':
-        return vgg16_bn(pretrained=pretrained, start_idx=start_idx)
+        return vgg16_bn(pretrained=pretrained)
     elif classifier == 'vgg19_bn':
         return vgg19_bn(pretrained=pretrained)
     elif classifier == 'resnet18':
@@ -38,30 +43,16 @@ def get_classifier(classifier, pretrained, start_idx=None):
         raise NameError('Please enter a valid classifier')
         
 class CIFAR10_Module(pl.LightningModule):
-    def __init__(self, hparams, pretrained=False, start_idx=0):
+    def __init__(self, hparams, pretrained=False):
         super().__init__()
-        self.val_x = None
-        self.val_y = None
         self.hparams = hparams
         self.criterion = torch.nn.CrossEntropyLoss()
         self.mean = [0.4914, 0.4822, 0.4465]
         self.std = [0.2023, 0.1994, 0.2010]
-        self.model = get_classifier(hparams.classifier, pretrained, start_idx=start_idx)
+        self.model = get_classifier(hparams.classifier, pretrained)
         self.train_size = len(self.train_dataloader().dataset)
         self.val_size = len(self.val_dataloader().dataset)
-
-        self.model.trim_until(start_idx)
-
-        self.activations = collections.defaultdict(list)
-        def save_activation(name, mod, inp, out):
-            self.activations[name].append(out.cpu())
-
-        for name, m in self.model.named_modules():
-            if type(m)==torch.nn.modules.activation.ReLU:
-                # partial to assign the layer name to each hook
-                print(name)
-                m.register_forward_hook(partial(save_activation, name))
-
+        
     def forward(self, batch):
         images, labels = batch
         predictions = self.model(images)
@@ -110,21 +101,14 @@ class CIFAR10_Module(pl.LightningModule):
                                               transforms.RandomHorizontalFlip(),
                                               transforms.ToTensor(),
                                               transforms.Normalize(self.mean, self.std)])
-        dataset = CIFAR10(root=self.hparams.data_dir, train=True, transform=transform_train, download=True)
+        dataset = CIFAR10(root=self.hparams.data_dir, train=True, transform=transform_train)
         dataloader = DataLoader(dataset, batch_size=self.hparams.batch_size, num_workers=4, shuffle=True, drop_last=True, pin_memory=True)
         return dataloader
     
     def val_dataloader(self):
-        if self.val_x is not None:
-            val_x_t = torch.Tensor(self.val_x)
-            val_y_t = torch.LongTensor(self.val_y)
-            dataloader = DataLoader(TensorDataset(val_x_t, val_y_t), batch_size=self.hparams.batch_size, num_workers=4, pin_memory=True)
-            return dataloader
-
         transform_val = transforms.Compose([transforms.ToTensor(),
                                             transforms.Normalize(self.mean, self.std)])
-        dataset = CIFAR10(root=self.hparams.data_dir, train=False, transform=transform_val, download=True)
-
+        dataset = CIFAR10(root=self.hparams.data_dir, train=False, transform=transform_val)
         dataloader = DataLoader(dataset, batch_size=self.hparams.batch_size, num_workers=4, pin_memory=True)
         return dataloader
     

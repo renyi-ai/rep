@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import os
+from copy import deepcopy
 
 __all__ = [
     'VGG', 'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn',
@@ -9,10 +10,9 @@ __all__ = [
 
 class VGG(nn.Module):
 
-    def __init__(self, features_list, num_classes=10, init_weights=True):
+    def __init__(self, features, num_classes=10, init_weights=True, state_dict=None):
         super(VGG, self).__init__()
-        self.features_list = features_list
-        self.features = features_list[0]
+        self.features = features
         self.avgpool = nn.AdaptiveAvgPool2d((7, 7))
         self.classifier = nn.Sequential(
             nn.Linear(512 * 7 * 7, 4096),
@@ -25,9 +25,8 @@ class VGG(nn.Module):
         )
         if init_weights:
             self._initialize_weights()
-
-    def trim_until(self, idx):
-        self.features = self.features_list[idx]
+        elif state_dict is not None:
+            self.load_state_dict(state_dict)
 
     def forward(self, x):
         x = self.features(x)
@@ -49,32 +48,56 @@ class VGG(nn.Module):
                 nn.init.normal_(m.weight, 0, 0.01)
                 nn.init.constant_(m.bias, 0)
 
+class CutVGG(VGG):
+        
+    def __init__(self, features, num_classes=10, init_weights=True, state_dict=None):
+        super().__init__(features, num_classes, init_weights, state_dict)
+        self.orig_features = deepcopy(self.features)
+        self._start = 0
+        self._end = -1
+
+    # ================================================================
+    # PUBLIC
+    # ================================================================
+
+    def front(self, idx):
+        self._cut(start=0, end=idx)
+
+    def end(self, idx):
+        self._cut(start=idx, end=-1)
+
+    # ================================================================
+    # PRIVATE
+    # ================================================================
+        
+    def _cut(self, start=0, end=-1):
+        self._start = start
+        self._end = end
+        children_list = list(self.orig_features.children())
+        chosen_children = children_list[start:end]
+        self.features = torch.nn.Sequential(*chosen_children)
+
+    def forward(self, x):
+        is_end = self._end == -1
+        end_side_network = super().forward
+        front_side_network = self.features
+        return end_side_network(x) if is_end else front_side_network(x)
+ 
 
 def make_layers(cfg, batch_norm=False):
-    num_blocks = len(cfg)
-    layers_list = [[] for i in range(num_blocks+1)]
+    layers = []
     in_channels = 3
-    idx = 1
     for v in cfg:
         if v == 'M':
-            mp = nn.MaxPool2d(kernel_size=2, stride=2)
-            for i in range(0, idx):
-                layers_list[i] += [mp]
+            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
         else:
             conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
             if batch_norm:
-                bn = nn.BatchNorm2d(v)
-                relu = nn.ReLU(inplace=True)
-                for i in range(0, idx):
-                    layers_list[i] += [conv2d, bn, relu]
+                layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
             else:
-                relu = nn.ReLU(inplace=True)
-                for i in range(0, idx):
-                    layers_list[i] += [conv2d, relu]
+                layers += [conv2d, nn.ReLU(inplace=True)]
             in_channels = v
-        idx += 1
-    print([len(layers) for layers in layers_list])
-    return [nn.Sequential(*layers) for layers in layers_list]
+    return nn.Sequential(*layers)
 
 
 cfgs = {
@@ -85,14 +108,11 @@ cfgs = {
 }
 
 
-def _vgg(arch, cfg, batch_norm, pretrained, progress, device, start_idx=0, **kwargs):
+def _vgg(arch, cfg, batch_norm, pretrained, progress, device, **kwargs):
     if pretrained:
         kwargs['init_weights'] = False
-    model = VGG(make_layers(cfgs[cfg], batch_norm=batch_norm), **kwargs)
-    if pretrained:
-        script_dir = os.path.dirname(__file__)
-        state_dict = torch.load(script_dir + '/state_dicts/'+arch+'.pt', map_location=device)
-        model.load_state_dict(state_dict)
+        kwargs['state_dict'] = torch.load('res/cifar10/models/'+arch+'.pt', map_location=device)
+    model = CutVGG(make_layers(cfgs[cfg], batch_norm=batch_norm), **kwargs)
     return model
 
 
@@ -136,24 +156,24 @@ def vgg13_bn(pretrained=False, progress=True, device='cpu', **kwargs):
     return _vgg('vgg13_bn', 'B', True, pretrained, progress, device, **kwargs)
 
 
-def vgg16(pretrained=False, progress=True, start_idx=None, **kwargs):
+def vgg16(pretrained=False, progress=True, **kwargs):
     """VGG 16-layer model (configuration "D")
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _vgg('vgg16', 'D', False, pretrained, progress, start_idx=start_idx, **kwargs)
+    return _vgg('vgg16', 'D', False, pretrained, progress, **kwargs)
 
 
-def vgg16_bn(pretrained=False, progress=True, device='cpu', start_idx=None, **kwargs):
+def vgg16_bn(pretrained=False, progress=True, device='cpu', **kwargs):
     """VGG 16-layer model (configuration "D") with batch normalization
 
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _vgg('vgg16_bn', 'D', True, pretrained, progress, device, start_idx=start_idx, **kwargs)
+    return _vgg('vgg16_bn', 'D', True, pretrained, progress, device, **kwargs)
 
 
 def vgg19(pretrained=False, progress=True, **kwargs):

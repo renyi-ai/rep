@@ -1,10 +1,15 @@
 import os
+import sys
 import torch
 from argparse import ArgumentParser
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import LearningRateLogger
 from pytorch_lightning.loggers import TensorBoardLogger
-from cifar10_module import CIFAR10_Module
+
+if './' not in sys.path:
+    sys.path.append('./')
+
+from . import CIFAR10_Module
 
 def main(hparams):
     
