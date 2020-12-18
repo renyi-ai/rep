@@ -61,6 +61,12 @@ class CutVGG(VGG):
     # PUBLIC
     # ================================================================
 
+    @property
+    def layer_info(self):
+        layer_info = list(self.orig_features.children())
+        layer_info = [str(x) for x in layer_info]
+        return layer_info
+
     def front(self, idx):
         self._cut(start=0, end=idx)
 

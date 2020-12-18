@@ -40,8 +40,6 @@ def main(args):
     end_model = get_model(args, front=False)
     print('done.')
 
-    #import pdb; pdb.set_trace()
-
     print('3) Calculating true logits.. ', end='')
     true_logits = run_model_on_data_loader(full_model, data_loader, verbose=False)
     print('done.')
