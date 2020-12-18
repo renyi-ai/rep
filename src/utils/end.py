@@ -13,10 +13,12 @@ def get_transformation():
 def load_activations(filepath):
     return pickle.load(open(filepath,'rb'))
 
-def run_model_on_data(model, data, batch_size=32):
+def run_model_on_data(model, data, batch_size=32, verbose=True):
     results = []
     trans = get_transformation()
-    for i in tqdm(range(0,len(data),batch_size)):
+    iterator = range(0,len(data),batch_size)
+    iterator = tqdm(iterator) if verbose else iterator
+    for i in iterator:
         start = i
         end = min(i+batch_size, len(data))
         x = torch.from_numpy(data[start:end])

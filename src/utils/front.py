@@ -26,9 +26,10 @@ def get_data_loader(data_dir, batch_size):
                                               num_workers=4, pin_memory=True)
     return data_loader
 
-def run_model_on_data_loader(model, data_loader):
+def run_model_on_data_loader(model, data_loader, verbose=True):
     activations = []
-    for x,y in tqdm(data_loader):
+    data_loader = tqdm(data_loader) if verbose else data_loader
+    for x,y in data_loader:
         x = x.to(device)
         batch_activation = list(model(x).detach().cpu().numpy())
         activations.extend(batch_activation)

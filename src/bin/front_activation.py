@@ -5,7 +5,7 @@ import argparse
 if './' not in sys.path:
     sys.path.append('./')
 
-from src.bin import get_classifier, get_model, save_activations
+from src.bin import get_model, save_activations
 from src.utils.front import get_data_loader, run_model_on_data_loader
 
 def _parse_args(args):

@@ -12,7 +12,7 @@ from pytorch_lightning import Trainer
 if './' not in sys.path:
     sys.path.append('./')
 
-from src.bin import get_classifier, get_model, save_activations
+from src.bin import get_model, save_activations
 from src.utils.end import load_activations, run_model_on_data
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
