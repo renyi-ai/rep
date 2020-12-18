@@ -53,8 +53,9 @@ class CutVGG(VGG):
     def __init__(self, features, num_classes=10, init_weights=True, state_dict=None):
         super().__init__(features, num_classes, init_weights, state_dict)
         self.orig_features = deepcopy(self.features)
+        self.n_features = len(list(self.orig_features.children()))
         self._start = 0
-        self._end = -1
+        self._end = self.n_features
 
     # ================================================================
     # PUBLIC
@@ -64,13 +65,13 @@ class CutVGG(VGG):
         self._cut(start=0, end=idx)
 
     def end(self, idx):
-        self._cut(start=idx, end=-1)
+        self._cut(start=idx, end=self.n_features)
 
     # ================================================================
     # PRIVATE
     # ================================================================
         
-    def _cut(self, start=0, end=-1):
+    def _cut(self, start, end):
         self._start = start
         self._end = end
         children_list = list(self.orig_features.children())

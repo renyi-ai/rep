@@ -21,8 +21,8 @@ def run_model_on_data(model, data, batch_size=32, verbose=True):
     for i in iterator:
         start = i
         end = min(i+batch_size, len(data))
-        x = torch.from_numpy(data[start:end])
-        x = x.to(device)
+        x = [trans(x) for x in data[start:end]]
+        x = torch.stack(x, 0).to(device)
         batch_results = list(model(x).detach().cpu().numpy())
         results.extend(batch_results)
     results = np.array(results)
