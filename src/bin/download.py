@@ -25,7 +25,7 @@ def main():
         
     print('Download successful. Unzipping file.')
     path_to_zip_file = os.path.join(os.getcwd(), 'state_dicts.zip')
-    directory_to_extract_to = 'cifar10/models/'
+    directory_to_extract_to = 'temp/'
     with zipfile.ZipFile(path_to_zip_file, 'r') as zip_ref:
         zip_ref.extractall(directory_to_extract_to)
         print('Unzip file successful!')
