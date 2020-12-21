@@ -85,7 +85,8 @@ class CutVGG(VGG):
         self.features = torch.nn.Sequential(*chosen_children)
 
     def forward(self, x):
-        is_end = self._end == -1
+
+        is_end = self._end == self.n_features
         end_side_network = super().forward
         front_side_network = self.features
         return end_side_network(x) if is_end else front_side_network(x)

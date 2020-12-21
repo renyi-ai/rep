@@ -27,12 +27,17 @@ def get_data_loader(data_dir, batch_size):
                                               num_workers=4, pin_memory=True)
     return data_loader
 
-def run_model_on_data_loader(model, data_loader, verbose=True):
+def run_model_on_data_loader(model, data_loader, verbose=True, ret_true_logits=False):
     activations = []
     data_loader = tqdm(data_loader) if verbose else data_loader
+    all_y = []
     for x,y in data_loader:
         x = x.to(device)
         batch_activation = list(model(x).detach().cpu().numpy())
         activations.extend(batch_activation)
+        all_y.extend(y.detach().cpu().numpy())
     activations = np.array(activations)
+    all_y = np.array(all_y)
+    if ret_true_logits:
+        return activations, all_y
     return activations

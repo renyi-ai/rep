@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import os
+from collections import OrderedDict
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d']
@@ -198,12 +199,40 @@ class ResNet(nn.Module):
         return x
 
 
+class CutResNet(ResNet):
+
+    def define_flattened_layers(self):
+        flat_layers = []
+        for name, child in self.named_children():
+            self._add_layer(flat_layers, name, child)
+            if name == 'avgpool':
+                break
+        print(len(flat_layers))
+        self.layers = nn.Sequential(OrderedDict(flat_layers[:23]))
+        
+
+    def _add_layer(self, all_layers, name, new_layer):
+        if type(new_layer) in [nn.Sequential, BasicBlock, Bottleneck]:
+            for subname, child in new_layer.named_children():
+                layer_name = name + '_' + subname
+                self._add_layer(all_layers, layer_name, child)
+        else:
+            all_layers.append((name, new_layer))
+
+
+    def forward(self, x):
+        x = self.layers(x)
+        x = x.reshape(x.size(0), -1)
+        x = self.fc(x)
+        return x
+
+
 def _resnet(arch, block, layers, pretrained, progress, device, **kwargs):
-    model = ResNet(block, layers, **kwargs)
+    model = CutResNet(block, layers, **kwargs)
     if pretrained:
-        script_dir = os.path.dirname(__file__)
-        state_dict = torch.load(script_dir + '/state_dicts/'+arch+'.pt', map_location=device)
+        state_dict = torch.load('res/cifar10/models/'+arch+'.pt', map_location=device)
         model.load_state_dict(state_dict)
+    model.define_flattened_layers()
     return model
 
 

@@ -41,7 +41,10 @@ def main(args):
     print('done.')
 
     print('3) Calculating true logits.. ', end='')
-    true_logits = run_model_on_data_loader(full_model, data_loader, verbose=False)
+    true_preds, true_logits = run_model_on_data_loader(full_model,
+                                                       data_loader,
+                                                       verbose=False,
+                                                       ret_true_logits=True)
     print('done.')
 
     data_loader = get_data_loader(args.data_dir, args.batch_size)
@@ -61,7 +64,7 @@ def main(args):
     print('done.')
 
     print('5) Running comparison..', end='')
-    compare_value = get_comparator(args.comparator)(true_logits, y_hat)
+    compare_value = get_comparator(args.comparator)(true_logits, true_preds, y_hat)
     print('done.')
 
     print()
