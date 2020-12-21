@@ -1,5 +1,7 @@
 import requests, zipfile, os
 from tqdm import tqdm
+import shutil
+import glob
 
 def main():
     url = "https://rutgers.box.com/shared/static/y9wi8ic7bshe2nn63prj9vsea7wibd4x.zip"
@@ -27,6 +29,14 @@ def main():
     with zipfile.ZipFile(path_to_zip_file, 'r') as zip_ref:
         zip_ref.extractall(directory_to_extract_to)
         print('Unzip file successful!')
+
+    dst = 'res/cifar10/models'
+    os.makedirs(dst, exist_ok=True)
+    os.remove(path_to_zip_file)
+    src_paths = glob.glob('temp/state_dicts/*.pt')
+    for src in src_paths:
+        shutil.move(src, dst)
+    shutil.rmtree('temp/')
         
 if __name__ == '__main__':
     main()
