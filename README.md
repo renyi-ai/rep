@@ -81,3 +81,13 @@ You can choose from the following settings:
 ```bash
 python src/bin/perturbation_impact.py vgg16_bn 20 twice pre_acc
 ```
+
+### Ask layer information
+```bash
+python src/bin/layer_info.py vgg16_bn
+```
+or see where your modifier function would be with a specified index:
+
+```bash
+python src/bin/layer_info.py vgg16_bn 20
+```
