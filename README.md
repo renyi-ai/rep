@@ -1,78 +1,83 @@
-# PyTorch models trained on CIFAR-10 dataset
-- I modified [TorchVision](https://pytorch.org/docs/stable/torchvision/models.html) official implementation of popular CNN models, and trained those on CIFAR-10 dataset.
-- I changed *number of class, filter size, stride, and padding* in the the original code so that it works with CIFAR-10.
-- I also share the **weights** of these models, so you can just load the weights and use them.
-- The code is highly re-producible and readable by using PyTorch-Lightning.
+# Setup
 
-## Statistics of supported models
-| No. |     Model    | Val. Acc. | No. Params |   Size |
-|:---:|:-------------|----------:|-----------:|-------:|
-| 1   | vgg11_bn     |   92.09%  |  128.813 M | 491 MB |
-| 2   | vgg13_bn     |   94.29%  |  128.998 M | 492 MB |
-| 3   | vgg16_bn     |   93.91%  |  134.310 M | 512 MB |
-| 4   | vgg19_bn     |   93.80%  |  139.622 M | 533 MB |
-| 5   | resnet18     |   93.33%  |   11.174 M |  43 MB |
-| 6   | resnet34     |   92.92%  |   21.282 M |  81 MB |
-| 7   | resnet50     |   93.86%  |   23.521 M |  90 MB |
-| 8   | densenet121  |   94.14%  |    6.956 M |  27 MB |
-| 9   | densenet161  |   94.24%  |   26.483 M | 102 MB |
-| 10  | densenet169  |   94.00%  |   12.493 M |  48 MB |
-| 11  | mobilenet_v2 |   94.17%  |    2.237 M |   9 MB |
-| 12  | googlenet    |   92.73%  |    5.491 M |  21 MB |
-| 13  | inception_v3 |   93.76%  |   21.640 M |  83 MB |
+## Install
 
-## How to use pretrained models
+You will need pytorch and torchvision installed.
 
-**Automatically download and extract the weights from Box (2.39 GB)**
-```python
-python cifar10_download.py
-```
-Or use [Google Drive](https://drive.google.com/file/d/11DDSbPqFXLzooIv6YPmXuKRIZJ24808g/view?usp=sharing) backup link (you have to download and extract manually)
-
-**Load model and run**
-```python
-from cifar10_models import *
-
-# Untrained model
-my_model = vgg11_bn()
-
-# Pretrained model
-my_model = vgg11_bn(pretrained=True)
+```bash
+git clone https://github.com/renyi-ai/rep.git
+cd rep
+git checkout pgergo
 ```
 
-If you use your own images, all models expect data to be in range [0, 1] then normalize by
-```python
-mean = [0.4914, 0.4822, 0.4465]
-std = [0.2023, 0.1994, 0.2010]
+## Downloads
+You will need to store your data with the following folder structure:
+```bash
+.
+├── res
+│   ├── cifar10
+│      ├── data
+│           ├── cifar-10-batches-py
+│               ├── batches.meta
+│               ├── data_batch_1
+│               ├── data_batch_2
+│               ├── ...
+│       ├── models
+│           ├── densenet121.pt
+│           ├── densenet161.pt
+│           ├── ...
+│       
 ```
 
-## How to train models from scratch
-Check the `cifar10_train.py` to see all available hyper-parameter choices.
-To reproduce the same accuracy use the default hyper-parameters
+In order to do that, download models and data as below.
 
-`python cifar10_train.py --classifier resnet18 --gpu '0,'`
+### Models
+This will download models to res/cifar10/models/
+```bash
+python src/bin/download.py
+```
 
-## How to test trained models
-`python cifar10_test.py --classifier resnet18 --gpu '0,'`
+### Data
+By making your first run, the data_loader will look into the res/cifar10/data folder
+and if it founds the cifar-10-batches-py directory there, it continues with that. If not,
+it will download it.
 
-Output
+## Running
 
-`TEST RESULTS
-{'Accuracy': 93.33}`
+In order to analyse how a perturbation modifies the model's behaviour, you need to define two functions.
 
-## Check the TensorBoard logs
-To see the training progress, cd to the `tensorboard_logs` and run TensorBoard there
+### Manipulation
+The first function needs to be defined is under src/functions/manipulator.py. The function you define here is going to be the modification you wish to apply in the middle of the network, on which ever layer you choose.
 
-`tensorboard --logdir=. --port=YOUR_PORT_NUMBER`
+```python
+# Example: Multiply each activation by 2
+def twice(self, x):
+    return 2*x
+```
+### Comparison
 
-Then go to
-`http://localhost:YOUR_PORT_NUMBER`
+The second function needs to be defined is under src/functions/comparison.py. In order to evaluate your manipulation function, you will need something that represents the value of change. Here you can compare your modified logits' results with the original network's results, moreover, you can compare it with the original labels.
 
-## Requirements
-**Just to use pretrained models**
-- pytorch = 1.5.0
+```python
+# Example: accuracy for the model which has NOT been modified
+def pre_acc(self, true_y, pre_y, post_y):
+    # Shapes:
+    # true_y : (10000,) (e.g. [7, 3, 2, ...])
+    # pre_y  : (10000, 10) (one-hot)
+    # post_y : (10000, 10) (one-hot)
+    pred = pre_y.argmax(axis=1).flatten()
+    return (pred==true_y).sum() / true_y.size
+```
 
-**To train & test**
-- torchvision = 0.6.0
-- tensorboard = 2.2.1
-- pytorch-lightning = 0.7.6
+### Run analysis
+
+You can choose from the following settings:
+   - Which model to run (e.g. vgg16_bn)
+   - Which layer index you want to modify (e.g. 20)
+   - Your manipulation function (e.g. twice)
+   - Your comaprison function (e.g. pre_acc)
+
+
+```bash
+python src/bin/perturbation_impact.py vgg16_bn 20 twice pre_acc
+```
