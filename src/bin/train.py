@@ -1,7 +1,6 @@
 import os
 import sys
 from argparse import ArgumentParser
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -45,8 +44,7 @@ def get_model(classifier, device):
 
 def create_train_directory(save_folder_root, classifier):
     # Create new folder with current date
-    date = datetime.now().strftime('%Y-%m-%d-%H%M%S')
-    save_folder = os.path.join(save_folder_root, classifier, date)
+    save_folder = os.path.join(save_folder_root, classifier)
     os.makedirs(save_folder, exist_ok=True)
     return save_folder
 
@@ -86,8 +84,8 @@ def main(args):
         data_loaders['train'] = get_data_loader_from_dataset(datasets['train'], args.batch_size, seed=epoch)
         
         # Progress bar 
-        n_iter = len(data_loaders['train'].dataset) // data_loaders['train'].batch_size
-        kbar = pkbar.Kbar(target=n_iter+1,
+        kbar_n_iter = len(data_loaders['train'].dataset) // data_loaders['train'].batch_size
+        kbar = pkbar.Kbar(target=kbar_n_iter+1,
                             epoch=epoch,
                             width=8,
                             always_stateful=False)
@@ -98,6 +96,7 @@ def main(args):
             running_metrics =_init_metrics()
             # Use either training or validation data loader
             data_loader = data_loaders[phase]
+            n_iter = len(data_loader.dataset) // data_loader.batch_size
 
             # Iterate through data in batches
             for i, (inputs, labels) in enumerate(data_loader):
@@ -135,11 +134,11 @@ def main(args):
                 if n_iterations_ran >= args.n_iter:
                     break
 
-            # Save information about this epoch
-            for name, value in running_metrics.items():
-                if name != 'loss':
-                    value = value.detach().cpu().numpy()
-                epoch_data[phase + '_' + name] = value / n_iter
+                # Save information about this epoch
+                for name, value in running_metrics.items():
+                    if name != 'loss':
+                        value = value.detach().cpu().numpy()
+                    epoch_data[phase + '_' + name] = value / n_iter
 
             if phase=='val':
                 val_values = [(x,y) for (x,y) in epoch_data.items() if x.startswith('val_')]
