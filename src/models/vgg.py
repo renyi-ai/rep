@@ -26,7 +26,7 @@ class VGG(nn.Module):
         if init_weights:
             self._initialize_weights()
         elif state_dict is not None:
-            self.load_state_dict(state_dict)
+            self.load_state_dict(state_dict, strict=False)
 
     def forward(self, x):
         x = self.features(x)
@@ -117,8 +117,11 @@ cfgs = {
 
 
 def _vgg(arch, cfg, batch_norm, pretrained, progress, device, **kwargs):
-    if pretrained:
+    if pretrained or 'n_iter' in kwargs:
         kwargs['init_weights'] = False
+        if 'n_iter' in kwargs and kwargs['n_iter'] is not None:
+            arch += '--'+str(kwargs['n_iter'])
+        del kwargs['n_iter']
         kwargs['state_dict'] = torch.load('res/cifar10/models/'+arch+'.pt', map_location=device)
     model = CutVGG(make_layers(cfgs[cfg], batch_norm=batch_norm), **kwargs)
     return model

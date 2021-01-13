@@ -6,7 +6,7 @@ from copy import deepcopy
 __all__ = ['lenet']
 
 class LeNet5(nn.Module):
-    def __init__(self, n_classes):
+    def __init__(self, n_classes, state_dict=None):
         super(LeNet5, self).__init__()
 
         self.features = nn.Sequential(            
@@ -25,6 +25,9 @@ class LeNet5(nn.Module):
             nn.Linear(in_features=84, out_features=n_classes),
         )
 
+        if state_dict is not None:
+            self.load_state_dict(state_dict, strict=False)
+
     def forward(self, x):
         x = self.features(x)
         x = torch.flatten(x, 1)
@@ -33,8 +36,8 @@ class LeNet5(nn.Module):
 
 class CutLeNet(LeNet5):
         
-    def __init__(self, num_classes=10):
-        super().__init__(num_classes)
+    def __init__(self, num_classes=10, state_dict=None):
+        super().__init__(num_classes, state_dict)
         self.orig_features = deepcopy(self.features)
         self.n_features = len(list(self.orig_features.children()))
         self._start = 0
@@ -74,7 +77,10 @@ class CutLeNet(LeNet5):
         return end_side_network(x) if is_end else front_side_network(x)
 
 
-
-
-def lenet():
-    return CutLeNet()
+def lenet(n_iter=None, device='cpu'):
+    if n_iter is not None:
+        path = 'res/cifar10/models/lenet--{}.pt'.format(n_iter)
+        state_dict = torch.load(path)
+        return CutLeNet(state_dict=state_dict)
+    else:
+        return CutLeNet()

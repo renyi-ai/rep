@@ -42,18 +42,18 @@ def get_model(classifier, device):
     model.train().to(device)
     return model
 
-def create_train_directory(save_folder_root, classifier):
-    # Create new folder with current date
-    save_folder = os.path.join(save_folder_root, classifier)
-    os.makedirs(save_folder, exist_ok=True)
-    return save_folder
+# def create_train_directory(save_folder_root, classifier):
+#     # Create new folder with current date
+#     save_folder = os.path.join(save_folder_root, classifier)
+#     os.makedirs(save_folder, exist_ok=True)
+#     return save_folder
 
 def main(args):
 
     n_iterations_ran = 0
     device = _get_device()
     stats = pd.DataFrame()
-    save_folder = create_train_directory(args.save_dir, args.model)
+    save_folder = args.save_dir #create_train_directory(args.save_dir, args.model)
 
     # Define just for initialization + download if needed
     trans = get_transformation()
@@ -127,7 +127,7 @@ def main(args):
                     kbar.update(i, values=new_values)
                     n_iterations_ran += 1
                     if n_iterations_ran % args.save_frequency == 0:
-                        filename = str(n_iterations_ran) + '.pt'
+                        filename = args.model+'--'+str(n_iterations_ran) + '.pt'
                         path = os.path.join(save_folder, filename)
                         torch.save(model.state_dict(), path, _use_new_zipfile_serialization=False)
 
@@ -146,7 +146,7 @@ def main(args):
 
         if n_iterations_ran < args.n_iter:
             stats = stats.append(epoch_data, ignore_index=True)
-            save_path = os.path.join(save_folder, 'training_log.csv')
+            save_path = os.path.join(save_folder, args.model+'-training_log.csv')
             stats.to_csv(save_path, index=False)
 
         epoch += 1
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight_decay', type=float, default=1e-2)
 
     # Added by Gergo
-    parser.add_argument('-o','--save-dir', type=str, default='snapshots')
+    parser.add_argument('-o','--save-dir', type=str, default='res/cifar10/models/')
     parser.add_argument('-s','--save-frequency', type=int, default=50)
     args = parser.parse_args()
     main(args)

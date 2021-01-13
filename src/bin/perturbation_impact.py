@@ -22,22 +22,33 @@ def _parse_args(args):
     parser.add_argument('--batch_size', type=int, default=64)
     return parser.parse_args(args)
 
-def get_full_model(args):
-    full_model = get_classifier(args.classifier, pretrained=True)
+def get_full_model(classifier, n_iter):
+    full_model = get_classifier(classifier, pretrained=True, n_iter=n_iter)
     full_model.eval().to(device)
     return full_model
 
+def split_model_name(model_name):
+    if '--' in model_name:
+        classifier, n_iter = model_name.split('--')
+    else:
+        classifier, n_iter = model_name, None
+    return classifier, n_iter
+
+
 def main(args):
     args = _parse_args(args)
+
+    # Get classifier reference
+    classifier, n_iter = split_model_name(args.classifier)
 
     print('1) Defining models.. ', end='')
     data_loader = get_data_loader(args.data_dir, args.batch_size)
     print('done.')
     
     print('2) Defining models.. ', end='')
-    full_model = get_full_model(args)
-    front_model = get_model(args, front=True)
-    end_model = get_model(args, front=False)
+    full_model = get_full_model(classifier, n_iter)
+    front_model = get_model(classifier, n_iter, args.index, front=True)
+    end_model = get_model(classifier, n_iter, args.index, front=False)
     print('done.')
 
     print('3) Calculating true logits.. ', end='')
