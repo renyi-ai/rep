@@ -41,3 +41,9 @@ def run_model_on_data_loader(model, data_loader, verbose=True, ret_true_logits=F
     if ret_true_logits:
         return activations, all_y
     return activations
+
+def get_labels_from_data_loader(data_loader):
+    labels = []
+    for x, y in data_loader:
+        labels.extend(y)
+    return np.array(labels)
