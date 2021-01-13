@@ -22,10 +22,11 @@ def get_data_loader(data_dir, batch_size, train=False, seed=0):
     trans = get_transformation()
     dataset = torchvision.datasets.CIFAR10(root=data_dir, train=train,
                                            download=True, transform=trans)
+    return get_data_loader_from_dataset(dataset, batch_size, seed=seed)
 
+def get_data_loader_from_dataset(dataset, batch_size, seed=0):
     if seed is not None:
         torch.manual_seed(seed)
-
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                               num_workers=4, pin_memory=True)
     return data_loader

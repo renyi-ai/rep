@@ -1,17 +1,20 @@
 import os
 import sys
-import torch
-import numpy as np
-import pkbar
-import pandas as pd
-from datetime import datetime
 from argparse import ArgumentParser
+from datetime import datetime
+
+import numpy as np
+import pandas as pd
+import pkbar
+import torchvision
+import torch
 
 if './' not in sys.path:
     sys.path.append('./')
 
 from src.bin import device, get_classifier
-from src.utils.front import get_data_loader
+from src.utils.front import get_data_loader_from_dataset, get_transformation
+
 
 def _accuracy(labels, preds):
     equality = torch.sum(labels == preds)
@@ -55,8 +58,17 @@ def main(args):
     save_folder = create_train_directory(args.save_dir, args.model)
 
     # Define just for initialization + download if needed
-    data = {}
-    data['val'] = get_data_loader(args.data_dir, args.batch_size, train=False)
+    trans = get_transformation()
+    datasets = {
+        'train' : torchvision.datasets.CIFAR10(root=args.data_dir, train=True,
+                                           download=True, transform=trans),
+        'val' : torchvision.datasets.CIFAR10(root=args.data_dir, train=False,
+                                           download=True, transform=trans)
+    }
+    data_loaders = {
+        'train' : None, # defining it later
+        'val' : get_data_loader_from_dataset(datasets['val'], args.batch_size)
+    }
     model = get_model(args.model, device)
 
     criterion = torch.nn.CrossEntropyLoss()
@@ -67,27 +79,25 @@ def main(args):
     # Exit when desired number of iterations reached
     while n_iterations_ran < args.n_iter:
 
-        epoch += 1 
-
         # Dict containing losses and accuracies
         epoch_data = {}
 
         # Init data loader with new seed
-        data['train'] = get_data_loader(args.data_dir, args.batch_size, train=True, seed=epoch)
+        data_loaders['train'] = get_data_loader_from_dataset(datasets['train'], args.batch_size, seed=epoch)
+        
+        # Progress bar 
+        n_iter = len(data_loaders['train'].dataset) // data_loaders['train'].batch_size
+        kbar = pkbar.Kbar(target=n_iter+1,
+                            epoch=epoch,
+                            width=8,
+                            always_stateful=False)
 
         for phase in ['train', 'val']:
 
             # Make every running metric zero
             running_metrics =_init_metrics()
             # Use either training or validation data loader
-            data_loader = data[phase]
-
-            # Progress bar 
-            n_iter = np.ceil(len(data_loader.dataset) / data_loader.batch_size)
-            kbar = pkbar.Kbar(target=n_iter,
-                              epoch=epoch,
-                              width=8,
-                              always_stateful=False)
+            data_loader = data_loaders[phase]
 
             # Iterate through data in batches
             for i, (inputs, labels) in enumerate(data_loader):
@@ -111,10 +121,11 @@ def main(args):
                 # Update progress bar
                 new_values = [(phase + '_' + name, value)
                                 for (name, value) in new_metrics.items()]
-                kbar.update(i, values=new_values)
+                
 
                 # Save model checkpoint
                 if phase == 'train':
+                    kbar.update(i, values=new_values)
                     n_iterations_ran += 1
                     if n_iterations_ran % args.save_frequency == 0:
                         filename = str(n_iterations_ran) + '.pt'
@@ -124,16 +135,22 @@ def main(args):
                 if n_iterations_ran >= args.n_iter:
                     break
 
-            if n_iterations_ran < args.n_iter:
+            # Save information about this epoch
+            for name, value in running_metrics.items():
+                if name != 'loss':
+                    value = value.detach().cpu().numpy()
+                epoch_data[phase + '_' + name] = value / n_iter
 
-                # Save information about this epoch
-                for name, value in running_metrics.items():
-                    if name != 'loss':
-                        value = value.detach().cpu().numpy()
-                    epoch_data[phase + '_' + name] = value / n_iter
-                stats = stats.append(epoch_data, ignore_index=True)
-                save_path = os.path.join(save_folder, 'training_log.csv')
-                stats.to_csv(save_path, index=False)
+            if phase=='val':
+                val_values = [(x,y) for (x,y) in epoch_data.items() if x.startswith('val_')]
+                kbar.add(1, values=val_values)
+
+        if n_iterations_ran < args.n_iter:
+            stats = stats.append(epoch_data, ignore_index=True)
+            save_path = os.path.join(save_folder, 'training_log.csv')
+            stats.to_csv(save_path, index=False)
+
+        epoch += 1
 
     print()
     print('{} iterations done.'.format(args.n_iter))

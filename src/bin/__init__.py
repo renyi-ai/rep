@@ -57,6 +57,8 @@ def get_classifier(classifier, pretrained):
         return googlenet(pretrained=pretrained)
     elif classifier == 'inception_v3':
         return inception_v3(pretrained=pretrained)
+    elif classifier == 'lenet':
+        return lenet()
     else:
         raise NameError('Please enter a valid classifier')
 
