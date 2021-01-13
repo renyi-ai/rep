@@ -61,5 +61,3 @@ def get_classifier(classifier, pretrained):
         raise NameError('Please enter a valid classifier')
 
 
-
-
