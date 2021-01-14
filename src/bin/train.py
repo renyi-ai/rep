@@ -12,7 +12,8 @@ if './' not in sys.path:
     sys.path.append('./')
 
 from src.bin import device, get_classifier
-from src.utils.front import get_data_loader_from_dataset, get_transformation
+from src.utils.front import get_data_loader_from_dataset
+from src.utils.common import get_transformation, get_aug_transformation
 
 
 def _accuracy(labels, preds):
@@ -57,9 +58,10 @@ def main(args):
 
     # Define just for initialization + download if needed
     trans = get_transformation()
+    aug_trans = get_aug_transformation()
     datasets = {
         'train' : torchvision.datasets.CIFAR10(root=args.data_dir, train=True,
-                                           download=True, transform=trans),
+                                           download=True, transform=aug_trans),
         'val' : torchvision.datasets.CIFAR10(root=args.data_dir, train=False,
                                            download=True, transform=trans)
     }

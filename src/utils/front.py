@@ -1,7 +1,6 @@
 import os
 import torch
 import torchvision
-import torchvision.transforms as transforms
 import pickle
 from tqdm import tqdm
 import numpy as np
@@ -9,14 +8,8 @@ from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
 
 from src.bin import device
+from src.utils.common import get_transformation
 
-
-def get_transformation():
-    mean = [0.4914, 0.4822, 0.4465]
-    std = [0.2023, 0.1994, 0.2010]
-    trans = transforms.Compose([transforms.ToTensor(),
-                                transforms.Normalize(mean, std)])
-    return trans
 
 def get_data_loader(data_dir, batch_size, train=False, seed=0):
     trans = get_transformation()
