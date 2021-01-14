@@ -39,7 +39,7 @@ def _update_running_metrics(orig, new):
     return orig
 
 def get_model(classifier, device):
-    model = get_classifier(classifier, pretrained=False)
+    model = get_classifier(classifier, pretrained=True)
     model.train().to(device)
     return model
 
