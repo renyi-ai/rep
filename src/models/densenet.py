@@ -118,6 +118,8 @@ class DenseNet(nn.Module):
         return out
 
 def _densenet(arch, growth_rate, block_config, num_init_features, pretrained, progress, device, **kwargs):
+    if 'n_iter' in kwargs:
+        del kwargs['n_iter']
     model = DenseNet(growth_rate, block_config, num_init_features, **kwargs)
     if pretrained:
         script_dir = os.path.dirname(__file__)
