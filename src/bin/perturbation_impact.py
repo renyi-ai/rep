@@ -8,6 +8,7 @@ if './' not in sys.path:
 from src.bin import device, get_classifier, get_model, save_activations
 from src.utils.front import get_data_loader, run_model_on_data_loader
 from src.utils.end import run_model_on_data
+from src.utils.common import split_model_name
 from src.functions import get_comparator, get_manipulator
 
 def _parse_args(args):
@@ -26,13 +27,6 @@ def get_full_model(classifier, n_iter):
     full_model = get_classifier(classifier, pretrained=True, n_iter=n_iter)
     full_model.eval().to(device)
     return full_model
-
-def split_model_name(model_name):
-    if '--' in model_name:
-        classifier, n_iter = model_name.split('--')
-    else:
-        classifier, n_iter = model_name, None
-    return classifier, n_iter
 
 
 def main(args):

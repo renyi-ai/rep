@@ -8,3 +8,10 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+def split_model_name(model_name):
+    if '--' in model_name:
+        classifier, n_iter = model_name.split('--')
+    else:
+        classifier, n_iter = model_name, None
+    return classifier, n_iter

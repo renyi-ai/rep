@@ -25,8 +25,8 @@ def save_activations(args, activations, prefix=''):
     if args.output_filename is None:
         filename = prefix+args.classifier+'__'+str(args.index)+'.pkl'
     else:
-        filename = args.output_filename
-    save_path = os.path.join(args.save_dir, prefix + filename)
+        filename = str(args.output_filename)
+    save_path = os.path.join(args.save_dir, filename)
     with open(save_path, 'wb') as f:
         pickle.dump(activations, f)
 

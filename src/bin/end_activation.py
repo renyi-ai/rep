@@ -14,6 +14,7 @@ if './' not in sys.path:
 
 from src.bin import get_model, save_activations
 from src.utils.end import load_activations, run_model_on_data
+from src.utils.common import split_model_name
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -33,9 +34,11 @@ def main(args):
     # Get activations
     args = _parse_args(args)
     in_data = load_activations(args.input_file)
+
+    classifier, n_iter = split_model_name(args.classifier)
     
     # Front model
-    model = get_model(args, front=False)
+    model = get_model(classifier, n_iter, args.index, front=False)
 
     # Run model on data
     predictions = run_model_on_data(model, in_data)

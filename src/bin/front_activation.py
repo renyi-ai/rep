@@ -8,7 +8,7 @@ if './' not in sys.path:
 from src.bin import get_model, save_activations
 from src.utils.front import get_data_loader, run_model_on_data_loader, get_labels_from_data_loader
 from src.utils.end import run_model_on_data as rmod_end
-from src.utils.common import str2bool
+from src.utils.common import str2bool, split_model_name
 
 def _parse_args(args):
     parser = argparse.ArgumentParser(description='Simple settings.')
@@ -25,8 +25,10 @@ def main(args):
     args = _parse_args(args)
     data_loader = get_data_loader(args.data_dir, args.batch_size)
     
+    classifier, n_iter = split_model_name(args.classifier)
+
     # Front model
-    model = get_model(args)
+    model = get_model(classifier, n_iter, args.index, front=True)
 
     # Run model on data
     activations = run_model_on_data_loader(model, data_loader)
